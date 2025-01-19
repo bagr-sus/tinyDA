@@ -172,7 +172,7 @@ def sample(
     if isinstance(proposal, SharedArchiveProposal):
         archive_manager = ArchiveManager.remote(chain_count=n_chains)
         if logger_ref is not None:
-            archive_manager.add_logger(logger_ref)
+            archive_manager.add_logger.remote(logger_ref)
         proposal.link_archive(archive_manager)
 
 

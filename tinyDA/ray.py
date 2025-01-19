@@ -381,7 +381,7 @@ class ArchiveManager:
     def get_archive(self):
         try:
             if self.logger is not None:
-                delays = ",".join(self.compute_chain_delays())
+                delays = ",".join([str(delay) for delay in self.compute_chain_delays()]) + "\n"
                 self.log(delays)
             return np.concatenate(self.shared_archive)
         except ValueError:
@@ -398,6 +398,9 @@ class ArchiveManager:
             return
 
     def compute_chain_delays(self):
-        max_length = max([len(a) for a in self.shared_archive])
-        delays = [max_length - len(a) for a in self.shared_archive]
+        try:
+            max_length = max([len(a) for a in self.shared_archive])
+            delays = [max_length - len(a) for a in self.shared_archive]
+        except:
+            delays = [0] * self.chain_count
         return delays
