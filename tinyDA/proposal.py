@@ -2,6 +2,7 @@
 import warnings
 import random
 from copy import deepcopy
+import logging
 
 import numpy as np
 from scipy.linalg import sqrtm
@@ -671,6 +672,7 @@ class DREAMZ(GaussianRandomWalk):
         adaptive=False,
         gamma=1.01,
         period=100,
+        archive_limit=0,
     ):
         """
         Parameters
@@ -740,6 +742,7 @@ class DREAMZ(GaussianRandomWalk):
             self.k = 0
 
         self.t = 0
+        self.archive_limit = archive_limit
 
     def setup_proposal(self, **kwargs):
         prior = kwargs["posterior"].prior
@@ -813,6 +816,12 @@ class DREAMZ(GaussianRandomWalk):
         # get the local archive if Z isn't provided.
         if Z is None:
             Z = self.Z
+        M = Z.shape[0]
+
+        # limit the archive, if specified
+        Z = Z[-self.archive_limit:]
+
+        logging.info(f"Z shape: {Z.shape}")
 
         # initialise the jump vectors.
         Z_r1 = np.zeros(self.d)
@@ -820,7 +829,7 @@ class DREAMZ(GaussianRandomWalk):
 
         # get jump vector components.
         for i in range(self.delta):
-            r1, r2 = np.random.choice(self.M, 2, replace=False)
+            r1, r2 = np.random.choice(M, 2, replace=False)
             Z_r1 += Z[r1, :]
             Z_r2 += Z[r2, :]
 
@@ -1635,8 +1644,9 @@ class DREAM(DREAMZ, SharedArchiveProposal):
         adaptive=False,
         gamma=1.01,
         period=100,
+        archive_limit=0,
     ):
-        DREAMZ.__init__(self, M0, delta, b, b_star, Z_method, nCR, adaptive, gamma, period)
+        DREAMZ.__init__(self, M0, delta, b, b_star, Z_method, nCR, adaptive, gamma, period, archive_limit)
         SharedArchiveProposal.__init__(self)
 
     def setup_proposal(self, **kwargs):
