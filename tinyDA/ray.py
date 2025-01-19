@@ -1,3 +1,4 @@
+from math import log
 import ray
 import warnings
 
@@ -368,6 +369,7 @@ class ArchiveManager:
         # separate collection for each chain
         self.shared_archive = [None] * chain_count
         self.chain_count = chain_count
+        self.logger = None
 
     def update_archive(self, sample, chain_id):
         # update the whole collection
@@ -378,7 +380,24 @@ class ArchiveManager:
 
     def get_archive(self):
         try:
+            if self.logger is not None:
+                delays = ",".join(self.compute_chain_delays())
+                self.log(delays)
             return np.concatenate(self.shared_archive)
         except ValueError:
             valid_achives = [a for a in self.shared_archive if a is not None]
             return np.concatenate(valid_achives)
+
+    def add_logger(self, logger_ref):
+        self.logger = logger_ref
+
+    def log(self, message):
+        try:
+            self.logger.write_to_file.remote(message, "chain_delay")
+        except:
+            return
+
+    def compute_chain_delays(self):
+        max_length = max([len(a) for a in self.shared_archive])
+        delays = [max_length - len(a) for a in self.shared_archive]
+        return delays
