@@ -31,6 +31,7 @@ def sample(
     force_sequential=False,
     force_progress_bar=False,
     subsampling_rate=None,
+    logger_ref=None,
 ):
     """Returns MCMC samples given a tinyDA.Posterior and a tinyDA.Proposal.
     This function takes as input a tinyDA.Posterior instance, or a list of
@@ -170,6 +171,8 @@ def sample(
     # if proposal is using a shared archive, initialize the shared archive and pass the reference to the proposal
     if isinstance(proposal, SharedArchiveProposal):
         archive_manager = ArchiveManager.remote(chain_count=n_chains)
+        if logger_ref is not None:
+            archive_manager.add_logger(logger_ref)
         proposal.link_archive(archive_manager)
 
 
