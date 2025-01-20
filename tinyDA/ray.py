@@ -383,11 +383,15 @@ class ArchiveManager:
             if self.logger is not None:
                 delays = ",".join([str(delay) for delay in self.compute_chain_delays()]) + "\n"
                 self.log(delays)
-            reversed_archive = [a[::-1] for a in self.shared_archive]
-            return np.concatenate(reversed_archive, axis=1)
+            reversed_archive = [a[::-1, :] for a in self.shared_archive]
+            return np.concatenate(reversed_archive, axis=0)
+            #stacked = np.stack(self.shared_archive)
+            #return stacked[:, ::-1, :].reshape(-1, stacked.shape[2])
         except:
-            reversed_valid_achive = [a[::-1] for a in self.shared_archive if a is not None]
-            return np.concatenate(reversed_valid_achive, axis=1)
+            reversed_valid_achive = [a[::-1, :] for a in self.shared_archive if a is not None]
+            return np.concatenate(reversed_valid_achive, axis=0)
+            #stacked = np.stack([a for a in self.shared_archive if a is not None])
+            #return stacked[:, ::-1, :].reshape(-1, stacked.shape[2])
 
 
     def add_logger(self, logger_ref):
