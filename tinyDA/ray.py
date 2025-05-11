@@ -66,7 +66,7 @@ class ParallelChain:
         # initialise Ray.
         #ray.init(ignore_reinit_error=True)
         if not ray.is_initialized():
-            ray.init()
+            ray.init(address="auto")
 
         # set up the parallel chains as Ray actors.
         self.remote_chains = [
@@ -131,7 +131,7 @@ class ParallelDAChain(ParallelChain):
         # initialise Ray.
         #ray.init(ignore_reinit_error=True)
         if not ray.is_initialized():
-            ray.init()
+            ray.init(address="auto")
 
         # set up the parallel DA chains as Ray actors.
         self.remote_chains = [
@@ -180,7 +180,7 @@ class ParallelMLDAChain(ParallelChain):
         # initialise Ray.
         #ray.init(ignore_reinit_error=True)
         if not ray.is_initialized():
-            ray.init()
+            ray.init(address="auto")
 
         # set up the parallel DA chains as Ray actors.
         self.remote_chains = [
@@ -268,7 +268,7 @@ class MultipleTry(Proposal):
 
         #ray.init(ignore_reinit_error=True)
         if not ray.is_initialized():
-            ray.init()
+            ray.init(address="auto")
 
     def setup_proposal(self, **kwargs):
         # pass the kwargs to the kernel.
