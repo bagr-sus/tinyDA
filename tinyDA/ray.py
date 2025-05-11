@@ -389,12 +389,18 @@ class ArchiveManager:
     def get_archive(self):
         try:
             if self.logger is not None:
-                delays = ",".join(self.compute_chain_delays())
+                delays = ",".join([str(delay) for delay in self.compute_chain_delays()]) + "\n"
                 self.log(delays)
-            return np.concatenate(self.shared_archive)
-        except ValueError:
-            valid_achives = [a for a in self.shared_archive if a is not None]
-            return np.concatenate(valid_achives)
+            reversed_archive = [a[::-1, :] for a in self.shared_archive]
+            return np.concatenate(reversed_archive, axis=0)
+            #stacked = np.stack(self.shared_archive)
+            #return stacked[:, ::-1, :].reshape(-1, stacked.shape[2])
+        except:
+            reversed_valid_achive = [a[::-1, :] for a in self.shared_archive if a is not None]
+            return np.concatenate(reversed_valid_achive, axis=0)
+            #stacked = np.stack([a for a in self.shared_archive if a is not None])
+            #return stacked[:, ::-1, :].reshape(-1, stacked.shape[2])
+
 
     def add_logger(self, logger_ref):
         self.logger = logger_ref
@@ -406,6 +412,9 @@ class ArchiveManager:
             return
 
     def compute_chain_delays(self):
-        max_length = max([len(a) for a in self.shared_archive])
-        delays = [max_length - len(a) for a in self.shared_archive]
+        try:
+            max_length = max([len(a) for a in self.shared_archive])
+            delays = [max_length - len(a) for a in self.shared_archive]
+        except:
+            delays = [0] * self.chain_count
         return delays
