@@ -115,7 +115,7 @@ class IndependenceSampler(Proposal):
 
     def make_proposal(self, link):
         # draw a random sample from the proposal distribution.
-        return self.q.rvs(1).flatten()
+        return self.q.rvs(1, random_state=np.random.default_rng()).flatten()
 
     def get_acceptance(self, proposal_link, previous_link):
         q_proposal = self.get_q(None, proposal_link)
