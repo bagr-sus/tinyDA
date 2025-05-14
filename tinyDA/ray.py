@@ -64,7 +64,9 @@ class ParallelChain:
         self.initial_parameters = initial_parameters
 
         # initialise Ray.
-        ray.init(ignore_reinit_error=True)
+        #ray.init(ignore_reinit_error=True)
+        if not ray.is_initialized():
+            ray.init(address="auto")
 
         # set up the parallel chains as Ray actors.
         self.remote_chains = [
@@ -127,7 +129,9 @@ class ParallelDAChain(ParallelChain):
         self.store_coarse_chain = store_coarse_chain
 
         # initialise Ray.
-        ray.init(ignore_reinit_error=True)
+        #ray.init(ignore_reinit_error=True)
+        if not ray.is_initialized():
+            ray.init(address="auto")
 
         # set up the parallel DA chains as Ray actors.
         self.remote_chains = [
@@ -174,7 +178,9 @@ class ParallelMLDAChain(ParallelChain):
         self.store_coarse_chain = store_coarse_chain
 
         # initialise Ray.
-        ray.init(ignore_reinit_error=True)
+        #ray.init(ignore_reinit_error=True)
+        if not ray.is_initialized():
+            ray.init(address="auto")
 
         # set up the parallel DA chains as Ray actors.
         self.remote_chains = [
@@ -260,7 +266,9 @@ class MultipleTry(Proposal):
                 " Using global adaptive scaling with MultipleTry proposal can be unstable.\n"
             )
 
-        ray.init(ignore_reinit_error=True)
+        #ray.init(ignore_reinit_error=True)
+        if not ray.is_initialized():
+            ray.init(address="auto")
 
     def setup_proposal(self, **kwargs):
         # pass the kwargs to the kernel.

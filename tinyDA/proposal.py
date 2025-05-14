@@ -816,6 +816,7 @@ class DREAMZ(GaussianRandomWalk):
         # get the local archive if Z isn't provided.
         if Z is None:
             Z = self.Z
+        M = Z.shape[0]
 
         # limit the archive, if specified
         Z = Z[-self.archive_limit:]
