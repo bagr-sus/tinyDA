@@ -58,6 +58,12 @@ class SharedArchiveProposal(Proposal):
         # get the value and block the thread until ready
         archive = ray.get(self.archive_reference.get_archive.remote())
         return archive
+    
+    def read_subset(self, subset_size):
+        """Get a subset of the archive."""
+        # get the value and block the thread until ready
+        subset = ray.get(self.archive_reference.get_random_subset.remote(subset_size))
+        return subset
 
     def update_archive(self, params):
         self.archive_reference.update_archive.remote(params, self.id)
@@ -1662,5 +1668,6 @@ class DREAM(DREAMZ, SharedArchiveProposal):
         self.update_archive(kwargs["parameters"])
 
     def make_proposal(self, link):
-        Z = self.read_archive()
+        #Z = self.read_archive()
+        Z = self.read_subset(self.delta)
         return super().make_proposal(link, Z)
