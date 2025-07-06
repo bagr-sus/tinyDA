@@ -1653,9 +1653,14 @@ class DREAM(DREAMZ, SharedArchiveProposal):
         gamma=1.01,
         period=100,
         archive_limit=0,
+        sync_rate=1,
+        subset_scale=1,
     ):
         DREAMZ.__init__(self, M0, delta, b, b_star, Z_method, nCR, adaptive, gamma, period, archive_limit)
         SharedArchiveProposal.__init__(self)
+        self.sync_rate = sync_rate
+        self.subset_scale = subset_scale
+        self.subset = None
 
     def setup_proposal(self, **kwargs):
         super().setup_proposal(**kwargs)
@@ -1663,12 +1668,21 @@ class DREAM(DREAMZ, SharedArchiveProposal):
         for sample in self.Z:
             self.update_archive(sample)
 
+        # Get initial subset from the shared archive
+        self.subset = self.read_subset(self.delta * self.sync_rate * self.subset_scale)
+
     def adapt(self, **kwargs):
         super().adapt(**kwargs)
         # Update shared archive
         self.update_archive(kwargs["parameters"])
 
+
     def make_proposal(self, link):
         #Z = self.read_archive()
-        Z = self.read_subset(self.delta)
-        return super().make_proposal(link, Z)
+        #logging.info("making proposal")
+        if self.t % self.sync_rate == 0:
+            #logging.info("Synchronizing local archive with shared archive.")
+            # Obtain new local subset from the shared archive
+            self.subset = self.read_subset(self.delta * self.sync_rate * self.subset_scale)
+            #logging.info(self.subset.shape)
+        return super().make_proposal(link, self.subset)
