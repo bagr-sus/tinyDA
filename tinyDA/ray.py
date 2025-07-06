@@ -396,7 +396,7 @@ class ArchiveManager:
             #stacked = np.stack(self.shared_archive)
             #return stacked[:, ::-1, :].reshape(-1, stacked.shape[2])
         except:
-            reversed_valid_achive = [a[::-1, :] for a in self.shared_archive if a is not None]
+            reversed_valid_achive = [a[::-1, :] for a in self.shared_archive if a is not None and len(a) > 0]
             return np.concatenate(reversed_valid_achive, axis=0)
             #stacked = np.stack([a for a in self.shared_archive if a is not None])
             #return stacked[:, ::-1, :].reshape(-1, stacked.shape[2])
