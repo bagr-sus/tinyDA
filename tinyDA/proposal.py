@@ -795,6 +795,7 @@ class DREAMZ(GaussianRandomWalk):
 
         # do simple random sampling from the prior.
         self.Z = prior.rvs(self.M)
+        #logging.info(f"Initial archive: {self.Z}")
 
     def adapt(self, **kwargs):
         super().adapt(**kwargs)
@@ -828,7 +829,7 @@ class DREAMZ(GaussianRandomWalk):
         Z = Z[-self.archive_limit:]
         M = Z.shape[0]
 
-        logging.info(f"Z shape: {Z.shape}")
+        #logging.info(f"Z shape: {Z.shape}")
 
         # initialise the jump vectors.
         Z_r1 = np.zeros(self.d)
