@@ -401,6 +401,17 @@ class ArchiveManager:
             #stacked = np.stack([a for a in self.shared_archive if a is not None])
             #return stacked[:, ::-1, :].reshape(-1, stacked.shape[2])
 
+    def get_random_subset(self, sample_size):
+        """
+        Returns a random subset of the archive with the specified sample size.
+        If the archive is smaller than the sample size, it returns the whole archive.
+        """
+        archive = self.get_archive()
+        if len(archive) <= sample_size:
+            return archive
+        else:
+            indices = np.random.choice(archive.shape[0], sample_size, replace=False)
+            return archive[indices, :]
 
     def add_logger(self, logger_ref):
         self.logger = logger_ref
