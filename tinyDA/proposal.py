@@ -1663,12 +1663,16 @@ class DREAM(DREAMZ, SharedArchiveProposal):
         archive_limit=0,
         sync_rate=1,
         subset_scale=1,
+        stuck_checking_start=3000,
+        stuck_checking_period=1000
     ):
         DREAMZ.__init__(self, M0, delta, b, b_star, Z_method, nCR, adaptive, gamma, period, archive_limit)
         SharedArchiveProposal.__init__(self)
         self.sync_rate = sync_rate
         self.subset_scale = subset_scale
         self.subset = None
+        self.stuck_checking_start = stuck_checking_start
+        self.stuck_checking_period = stuck_checking_period
 
     def setup_proposal(self, **kwargs):
         super().setup_proposal(**kwargs)
@@ -1693,4 +1697,9 @@ class DREAM(DREAMZ, SharedArchiveProposal):
             # Obtain new local subset from the shared archive
             self.subset = self.read_subset(self.delta * self.sync_rate * self.subset_scale)
             #logging.info(self.subset.shape)
+
+        if self.t > self.stuck_checking_start and self.t % self.stuck_checking_period == 0:
+            if self.check_stuck():
+                logging.warning("Chain %i is stuck", self.id)
+                return self.random_unstuck().parameters
         return super().make_proposal(link, self.subset)
