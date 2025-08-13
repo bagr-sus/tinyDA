@@ -10,6 +10,12 @@ from .chain import Chain, DAChain, MLDAChain
 from .proposal import *
 
 
+STUCK_LIKELIHOOD_THRESHOLD = 1.1
+PROGRESSION_CHECK_OFFSET = 100
+PROGRESSION_LIKELIHOOD_THRESHOLD = 0.9
+STUCK_CHECKING_PERIOD = 8 * 200
+STUCK_CHECKING_START = 8 * 3000
+
 class ParallelChain:
 
     """ParallelChain creates n_chains instances of tinyDA.Chain and runs the
@@ -373,11 +379,14 @@ class RemotePosterior:
 
 @ray.remote
 class ArchiveManager:
+
     def __init__(self, chain_count):
         # separate collection for each chain
         self.shared_archive = [None] * chain_count
         self.chain_count = chain_count
         self.logger = None
+        self.stuck = False * chain_count
+        self.stuck_counter = STUCK_CHECKING_START
 
     def update_archive(self, sample, chain_id):
         # update the whole collection
@@ -385,6 +394,9 @@ class ArchiveManager:
             self.shared_archive[chain_id] = np.vstack((self.shared_archive[chain_id], sample))
         except ValueError:
             self.shared_archive[chain_id] = sample
+
+        # run stuck check
+        self._flag_stuck()
 
     def get_archive(self):
         try:
@@ -429,3 +441,82 @@ class ArchiveManager:
         except:
             delays = [0] * self.chain_count
         return delays
+
+    def _get_latest(self):
+        """
+        Returns the latest sample from each chain.
+        If a chain has no samples, it skips that that chain.
+        """
+        latest_samples = []
+        for archive in self.shared_archive:
+            if archive is not None and len(archive) > 0:
+                latest_samples.append(archive[-1])
+            else:
+                latest_samples.append(None)
+        return latest_samples
+
+    def _get_generation(self, generation):
+        """
+        Returns the samples from a specific generation across all chains.
+        If a chain does not have that generation, it skips that chain.
+        """
+        generation_samples = []
+        for archive in self.shared_archive:
+            if archive is not None and len(archive) > generation:
+                generation_samples.append(archive[generation])
+            else:
+                generation_samples.append(None)
+        return generation_samples
+
+    def _highest_generation(self):
+        """
+        Returns the highest generation index across all chains.
+        If no chains have samples, it returns -1.
+        """
+        if not self.shared_archive:
+            return -1
+        return max([len(archive) - 1 for archive in self.shared_archive if archive is not None and len(archive) > 0], default=-1)
+
+    def _flag_stuck(self):
+        # check if its time to check for stuck chains
+        if self.stuck_counter > 0:
+            self.stuck_counter = self.stuck_counter - 1
+            return
+
+        # reset stuck counter
+        self.stuck_counter = STUCK_CHECKING_PERIOD
+
+        # get latest samples
+        latest_samples = self._get_latest()
+        # if all chains dont yet have samples, return
+        if len(latest_samples) != self.chain_count:
+            return
+
+        # check what samples are further from posterior compared to the best one
+        loglikes = [link.likelihood for link in latest_samples]
+        best_loglike = max(loglikes)
+        bounding_value = best_loglike * STUCK_LIKELIHOOD_THRESHOLD
+        behind = [loglike is not None and loglike < bounding_value for loglike in loglikes]
+
+        # check what samples have progressed in the last PROGRESSION_CHECK_OFFSET generations
+        older_samples = self._get_generation(self._highest_generation() - PROGRESSION_CHECK_OFFSET)
+        stuck = [older is not None and older.likelihood * PROGRESSION_LIKELIHOOD_THRESHOLD > latest.likelihood for older, latest in zip(older_samples, latest_samples)]
+
+        self.stuck = [b and s for b, s in zip(behind, stuck)]
+        assert len(self.stuck) == self.chain_count, "Stuck flags do not match chain count"
+
+    def is_stuck(self, chain_id):
+        """
+        Returns True if the chain is stuck, False otherwise.
+        """
+        return self.stuck[chain_id]
+
+    def random_nonstuck(self):
+        """
+        Returns a latest sample from a random non-stuck chain.
+        """
+        non_stuck_chains = [i for i, s in enumerate(self.stuck) if not s]
+        if not non_stuck_chains:
+            return None
+        random_chain = np.random.choice(non_stuck_chains)
+        return self._get_latest()[random_chain]
