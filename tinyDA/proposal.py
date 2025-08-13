@@ -68,6 +68,14 @@ class SharedArchiveProposal(Proposal):
     def update_archive(self, params):
         self.archive_reference.update_archive.remote(params, self.id)
 
+    def check_stuck(self):
+        """Check if the sampler is stuck."""
+        return ray.get(self.archive_reference.is_stuck.remote(self.id))
+
+    def random_unstuck(self):
+        """Get the latest samples from a random unstuck chain to try and get unstuck."""
+        return ray.get(self.archive_reference.random_unstuck.remote(self))
+
 
 class IndependenceSampler(Proposal):
     """Independence sampler using a proposal distribution q(x).
