@@ -66,15 +66,15 @@ class SharedArchiveProposal(Proposal):
         return subset
 
     def update_archive(self, params):
-        self.archive_reference.update_archive.remote(params, self.id)
+        return self.archive_reference.update_archive.remote(params, self.id)
 
     def check_stuck(self):
-        """Check if the sampler is stuck."""
+        """Check if the proposal is stuck."""
         return ray.get(self.archive_reference.is_stuck.remote(self.id))
 
     def random_unstuck(self):
         """Get the latest samples from a random unstuck chain to try and get unstuck."""
-        return ray.get(self.archive_reference.random_unstuck.remote(self))
+        return ray.get(self.archive_reference.random_nonstuck.remote())
 
 
 class IndependenceSampler(Proposal):
@@ -1677,16 +1677,19 @@ class DREAM(DREAMZ, SharedArchiveProposal):
     def setup_proposal(self, **kwargs):
         super().setup_proposal(**kwargs)
         # Sync initial local archive with shared archive
-        for sample in self.Z:
-            self.update_archive(sample)
+        # Wait until sync is complete to continue
+        ray.get(self.update_archive(self.Z))
 
         # Get initial subset from the shared archive
         self.subset = self.read_subset(self.delta * self.sync_rate * self.subset_scale)
 
-    def adapt(self, **kwargs):
-        super().adapt(**kwargs)
-        # Update shared archive
-        self.update_archive(kwargs["parameters"])
+    #def adapt(self, **kwargs):
+    #    super().adapt(**kwargs)
+    #   # Update shared archive
+
+    def get_acceptance(self, proposal_link, previous_link):
+        self.update_archive(proposal_link)
+        return super().get_acceptance(proposal_link, previous_link)
 
 
     def make_proposal(self, link):
@@ -1700,6 +1703,6 @@ class DREAM(DREAMZ, SharedArchiveProposal):
 
         if self.t > self.stuck_checking_start and self.t % self.stuck_checking_period == 0:
             if self.check_stuck():
-                logging.warning("Chain %i is stuck", self.id)
-                return self.random_unstuck().parameters
+                print("Chain %i is stuck", self.id)
+                return self.random_unstuck()
         return super().make_proposal(link, self.subset)
