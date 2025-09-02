@@ -10,11 +10,12 @@ from .chain import Chain, DAChain, MLDAChain
 from .proposal import *
 
 
-STUCK_LIKELIHOOD_THRESHOLD = 1.1
-PROGRESSION_CHECK_OFFSET = 100
+STUCK_LIKELIHOOD_THRESHOLD = 1.5
+STUCK_LIKELIHOOD_OFFSET = -150
+PROGRESSION_CHECK_OFFSET = 500
 PROGRESSION_LIKELIHOOD_THRESHOLD = 0.9
-STUCK_CHECKING_PERIOD = 8 * 200
-STUCK_CHECKING_START = 8 * 3000
+STUCK_CHECKING_PERIOD = 6 * 500
+STUCK_CHECKING_START = 6 * 2000
 
 class ParallelChain:
 
@@ -385,15 +386,29 @@ class ArchiveManager:
         self.shared_archive = [None] * chain_count
         self.chain_count = chain_count
         self.logger = None
-        self.stuck = False * chain_count
+        self.stuck = [False] * chain_count
         self.stuck_counter = STUCK_CHECKING_START
+        #self.latest_loglikes = [None] * chain_count
+        self.loglikes = [None] * chain_count
 
-    def update_archive(self, sample, chain_id):
-        # update the whole collection
+    def update_archive(self, samples, chain_id):
+        if not isinstance(samples, list) or not isinstance(samples, np.ndarray):
+            samples = [samples]
+    
+
+        params = np.array([sample.parameters if hasattr(sample, "parameters") else sample for sample in samples])
+        params = np.squeeze(params)
         try:
-            self.shared_archive[chain_id] = np.vstack((self.shared_archive[chain_id], sample))
+            self.shared_archive[chain_id] = np.vstack((self.shared_archive[chain_id], params))
         except ValueError:
-            self.shared_archive[chain_id] = sample
+            self.shared_archive[chain_id] = params
+
+        if hasattr(samples[0], "likelihood"):
+            likelihoods = np.array([sample.likelihood if hasattr(sample, "likelihood") else sample for sample in samples])
+            try:
+                self.loglikes[chain_id] = np.vstack((self.loglikes[chain_id], likelihoods))
+            except ValueError:
+                self.loglikes[chain_id] = likelihoods
 
         # run stuck check
         self._flag_stuck()
@@ -468,6 +483,32 @@ class ArchiveManager:
                 generation_samples.append(None)
         return generation_samples
 
+    def _get_latest_loglikes(self):
+        """
+        Returns the latest log-likelihoods from each chain.
+        If a chain has no samples, it skips that chain.
+        """
+        latest_loglikes = []
+        for loglike in self.loglikes:
+            if loglike is not None and len(loglike) > 0:
+                latest_loglikes.append(loglike[-1])
+            else:
+                latest_loglikes.append(None)
+        return np.concatenate(latest_loglikes)
+
+    def _get_generation_loglikes(self, generation):
+        """
+        Returns the log-likelihoods from a specific generation across all chains.
+        If a chain does not have that generation, it skips that chain.
+        """
+        generation_loglikes = []
+        for loglike in self.loglikes:
+            if loglike is not None and len(loglike) > generation:
+                generation_loglikes.append(loglike[generation])
+            else:
+                generation_loglikes.append(None)
+        return generation_loglikes
+
     def _highest_generation(self):
         """
         Returns the highest generation index across all chains.
@@ -487,22 +528,25 @@ class ArchiveManager:
         self.stuck_counter = STUCK_CHECKING_PERIOD
 
         # get latest samples
-        latest_samples = self._get_latest()
+        #latest_samples = self._get_latest()
         # if all chains dont yet have samples, return
-        if len(latest_samples) != self.chain_count:
-            return
+        #if len(latest_samples) != self.chain_count:
+        #    return
+        #logging.info(latest_samples)
 
         # check what samples are further from posterior compared to the best one
-        loglikes = [link.likelihood for link in latest_samples]
-        best_loglike = max(loglikes)
-        bounding_value = best_loglike * STUCK_LIKELIHOOD_THRESHOLD
-        behind = [loglike is not None and loglike < bounding_value for loglike in loglikes]
+        #loglikes = [link.likelihood for link in latest_samples]
+        current_loglikes = self._get_latest_loglikes()
+        best_loglike = np.max(current_loglikes)
+        bounding_value = best_loglike + STUCK_LIKELIHOOD_OFFSET
+        behind = [loglike is not None and loglike < bounding_value for loglike in current_loglikes]
 
         # check what samples have progressed in the last PROGRESSION_CHECK_OFFSET generations
-        older_samples = self._get_generation(self._highest_generation() - PROGRESSION_CHECK_OFFSET)
-        stuck = [older is not None and older.likelihood * PROGRESSION_LIKELIHOOD_THRESHOLD > latest.likelihood for older, latest in zip(older_samples, latest_samples)]
+        older_loglikes = self._get_generation_loglikes(self._highest_generation() - PROGRESSION_CHECK_OFFSET)
+        stuck = [older is not None and older > current * PROGRESSION_LIKELIHOOD_THRESHOLD for older, current in zip(older_loglikes, current_loglikes)]
 
-        self.stuck = [b and s for b, s in zip(behind, stuck)]
+        #self.stuck = [b and s for b, s in zip(behind, stuck)]
+        self.stuck = np.logical_and(behind, np.array(stuck)).tolist()
         assert len(self.stuck) == self.chain_count, "Stuck flags do not match chain count"
 
     def is_stuck(self, chain_id):
