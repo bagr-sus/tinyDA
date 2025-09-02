@@ -118,6 +118,13 @@ def sample(
     # get the availability flag.
     global ray_is_available
 
+    if ray_is_available and n_chains != 1 and not force_sequential:
+        if not ray.is_initialized():
+            try: 
+                ray.init(address="auto")
+            except ConnectionError:
+                ray.init()
+
     # put the posterior in a list, so that it can be indexed.
     if not isinstance(posteriors, list):
         posteriors = [posteriors]
