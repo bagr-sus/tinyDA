@@ -522,6 +522,14 @@ class ArchiveManager:
             return -1
         return max([len(archive) - 1 for archive in self.shared_archive if archive is not None and len(archive) > 0], default=-1)
 
+    def _highest_generation_loglike(self):
+        """
+        Returns the highest generation index across all chains that have log-likelihoods.
+        If no chains have log-likelihoods, it returns -1.
+        """
+        if not self.loglikes:
+            return -1
+        return max([len(loglike) - 1 for loglike in self.loglikes if loglike is not None and len(loglike) > 0], default=-1)
     def _flag_stuck(self):
         # check if its time to check for stuck chains
         if self.stuck_counter > 0:
