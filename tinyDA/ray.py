@@ -397,6 +397,7 @@ class ArchiveManager:
         if not isinstance(samples, list) or not isinstance(samples, np.ndarray):
             samples = [samples]
     
+        sample_count = len(samples)
 
         params = np.array([sample.parameters if hasattr(sample, "parameters") else sample for sample in samples])
         params = np.squeeze(params)
@@ -413,6 +414,7 @@ class ArchiveManager:
                 self.loglikes[chain_id] = likelihoods
 
         # run stuck check
+        self.stuck_counter = self.stuck_counter - sample_count + 1
         self._flag_stuck()
 
     def get_archive(self):
@@ -527,7 +529,7 @@ class ArchiveManager:
             return
 
         # reset stuck counter
-        self.stuck_counter = STUCK_CHECKING_PERIOD
+        self.stuck_counter = self.stuck_counter + STUCK_CHECKING_PERIOD
 
         # get latest samples
         #latest_samples = self._get_latest()
