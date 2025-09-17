@@ -468,6 +468,7 @@ class ArchiveManager:
         """
         latest_samples = []
         for archive in self.shared_archive:
+            print(archive.shape[0] if archive is not None else 0)
             if archive is not None and len(archive) > 0:
                 latest_samples.append(archive[-1])
             else:
@@ -530,6 +531,7 @@ class ArchiveManager:
         if not self.loglikes:
             return -1
         return max([len(loglike) - 1 for loglike in self.loglikes if loglike is not None and len(loglike) > 0], default=-1)
+
     def _flag_stuck(self):
         # check if its time to check for stuck chains
         if self.stuck_counter > 0:
@@ -555,8 +557,10 @@ class ArchiveManager:
 
         # check what samples have progressed in the last PROGRESSION_CHECK_OFFSET generations
         older_loglikes = self._get_generation_loglikes(self._highest_generation_loglike() - PROGRESSION_CHECK_OFFSET)
+        print(older_loglikes, current_loglikes)
         stuck = [older is not None and PROGRESSION_LIKELIHOOD_THRESHOLD * older > current for older, current in zip(older_loglikes, current_loglikes)]
 
+        print(behind, stuck)
         #self.stuck = [b and s for b, s in zip(behind, stuck)]
         self.stuck = np.logical_and(behind, stuck).tolist()
         assert len(self.stuck) == self.chain_count, "Stuck flags do not match chain count"
