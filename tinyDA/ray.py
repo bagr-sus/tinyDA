@@ -497,7 +497,7 @@ class ArchiveManager:
             if loglike is not None and len(loglike) > 0:
                 latest_loglikes.append(loglike[-1])
             else:
-                latest_loglikes.append(None)
+                latest_loglikes.append([None])
         return np.concatenate(latest_loglikes)
 
     def _get_generation_loglikes(self, generation):
@@ -510,8 +510,8 @@ class ArchiveManager:
             if loglike is not None and len(loglike) > generation:
                 generation_loglikes.append(loglike[generation])
             else:
-                generation_loglikes.append(None)
-        return generation_loglikes
+                generation_loglikes.append([None])
+        return np.concatenate(generation_loglikes)
 
     def _highest_generation(self):
         """
