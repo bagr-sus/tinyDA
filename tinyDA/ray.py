@@ -550,15 +550,15 @@ class ArchiveManager:
         #loglikes = [link.likelihood for link in latest_samples]
         current_loglikes = self._get_latest_loglikes()
         best_loglike = np.max(current_loglikes)
-        bounding_value = best_loglike + STUCK_LIKELIHOOD_OFFSET
+        bounding_value = best_loglike * STUCK_LIKELIHOOD_THRESHOLD + STUCK_LIKELIHOOD_OFFSET
         behind = [loglike is not None and loglike < bounding_value for loglike in current_loglikes]
 
         # check what samples have progressed in the last PROGRESSION_CHECK_OFFSET generations
-        older_loglikes = self._get_generation_loglikes(self._highest_generation() - PROGRESSION_CHECK_OFFSET)
-        stuck = [older is not None and older > current * PROGRESSION_LIKELIHOOD_THRESHOLD for older, current in zip(older_loglikes, current_loglikes)]
+        older_loglikes = self._get_generation_loglikes(self._highest_generation_loglike() - PROGRESSION_CHECK_OFFSET)
+        stuck = [older is not None and PROGRESSION_LIKELIHOOD_THRESHOLD * older > current for older, current in zip(older_loglikes, current_loglikes)]
 
         #self.stuck = [b and s for b, s in zip(behind, stuck)]
-        self.stuck = np.logical_and(behind, np.array(stuck)).tolist()
+        self.stuck = np.logical_and(behind, stuck).tolist()
         assert len(self.stuck) == self.chain_count, "Stuck flags do not match chain count"
 
     def is_stuck(self, chain_id):
