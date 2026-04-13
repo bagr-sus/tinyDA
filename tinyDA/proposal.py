@@ -1668,6 +1668,7 @@ class DREAM(DREAMZ, SharedArchiveProposal):
     ):
         DREAMZ.__init__(self, M0, delta, b, b_star, Z_method, nCR, adaptive, gamma, period, archive_limit)
         SharedArchiveProposal.__init__(self)
+        self.send_buffer = []
         self.sync_rate = sync_rate
         self.subset_scale = subset_scale
         self.subset = None
@@ -1688,7 +1689,15 @@ class DREAM(DREAMZ, SharedArchiveProposal):
     #   # Update shared archive
 
     def get_acceptance(self, proposal_link, previous_link):
-        self.update_archive(proposal_link)
+        
+        # extend local samples to send to the shared archive
+        self.send_buffer.append(proposal_link.parameters)
+
+        # send local samples to the shared archive
+        if self.t % self.sync_rate == 0:
+            self.update_archive(self.send_buffer)
+            self.send_buffer = []
+        
         return super().get_acceptance(proposal_link, previous_link)
 
 
