@@ -121,9 +121,9 @@ def sample(
     if ray_is_available and n_chains != 1 and not force_sequential:
         if not ray.is_initialized():
             try: 
-                ray.init(address="auto")
+                ray.init(address="auto", log_to_driver=True)
             except ConnectionError:
-                ray.init()
+                ray.init(log_to_driver=True)
 
     # put the posterior in a list, so that it can be indexed.
     if not isinstance(posteriors, list):
